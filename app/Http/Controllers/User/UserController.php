@@ -71,7 +71,60 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $user = User::findOrFail($id);
+
+        $rules = [
+            'email' => 'email|unique:users,email,' . $user->id,
+            'password' => 'min:6|confirmed',
+            'admin' => 'in:' . User::USUARIO_ADMINISTRADOR . ',' . User::USUARIO_REGULAR,
+        ];
+
+        $this->validate($request, $rules);
+
+        if ($request->has('name')) {
+            $user->name = $request->name;
+        }
+
+        if ($request->has('email') && $user->email != $request->email) {
+            $user->vefified = User::USUARIO_NO_VERIFICADO;
+            $user->verification_token = User::generarVerificationToken();
+            $user->email = $request->email;
+        }
+
+        if ($request->has('password')) {
+            $user->password = bcrypt($request->password);
+        }
+
+        if ($request->has('admin')) {
+            if (!$user->esVerificado()) {
+                return response()
+                    ->json(
+                        [
+                            'error' => 'Solo los usuarios verificados pueden cambiar su estado administrador.',
+                            'code' => 409
+                        ], 409);
+            }
+
+            $user->admin = $request->admin;
+        }
+
+        if (!$user->isDirty()) {
+            return response()
+                ->json(
+                    [
+                        'error' => 'Se debe especificar al menos un valor para actualizar.',
+                        'code' => 422
+                    ], 422);
+        }
+
+        $user->save();
+
+        return response()
+            ->json(
+                [
+                    'data' => $user
+                ], 200);
+
     }
 
     /**
@@ -82,6 +135,9 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return response()->json(['data' => $user], 200);
     }
 }
