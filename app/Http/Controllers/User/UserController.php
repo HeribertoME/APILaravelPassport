@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Http\Controllers\ApiController;
 use App\User;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
-class UserController extends Controller
+class UserController extends ApiController
 {
     /**
      * Display a listing of the resource.
@@ -17,7 +17,7 @@ class UserController extends Controller
     {
         $usuarios = User::all();
 
-        return response()->json(['data' => $usuarios], 200);
+        return $this->showAll($usuarios);
     }
 
     /**
@@ -46,7 +46,7 @@ class UserController extends Controller
 
         $usuario = User::create($campos);
 
-        return response()->json(['data' => $usuario], 201);
+        return $this->showOne($usuario, 201);
     }
 
     /**
@@ -59,7 +59,7 @@ class UserController extends Controller
     {
         $usuario = User::findOrFail($id);
 
-        return response()->json(['data' => $usuario], 200);
+        return $this->showOne($usuario, 200);
     }
 
     /**
@@ -97,33 +97,24 @@ class UserController extends Controller
 
         if ($request->has('admin')) {
             if (!$user->esVerificado()) {
-                return response()
-                    ->json(
-                        [
-                            'error' => 'Solo los usuarios verificados pueden cambiar su estado administrador.',
-                            'code' => 409
-                        ], 409);
+                return $this->errorResponse(
+                    'Solo los usuarios verificados pueden cambiar su estado administrador.',
+                    409);
             }
 
             $user->admin = $request->admin;
         }
 
         if (!$user->isDirty()) {
-            return response()
-                ->json(
-                    [
-                        'error' => 'Se debe especificar al menos un valor para actualizar.',
-                        'code' => 422
-                    ], 422);
+
+            return $this->errorResponse(
+                'Se debe especificar al menos un valor para actualizar.',
+                422);
         }
 
         $user->save();
 
-        return response()
-            ->json(
-                [
-                    'data' => $user
-                ], 200);
+        return $this->showOne($user, 200);
 
     }
 
@@ -138,6 +129,6 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         $user->delete();
 
-        return response()->json(['data' => $user], 200);
+        return $this->showOne($user, 200);
     }
 }
